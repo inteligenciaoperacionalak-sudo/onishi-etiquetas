@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fichas nutricionais · Onishi</title>
+<link rel="stylesheet" href="comum.css">
+</head>
+<body>
+<div id="cab"></div>
+<div class="wrap">
+  <div class="card">
+    <div class="linha">
+      <div class="campo"><label>Buscar</label><input id="busca" class="busca" placeholder="Nome ou código do produto"></div>
+      <div class="campo curto"><label>Mostrar</label><select id="filtro"><option value="ativos">Ativos</option><option value="incompletos">Ficha incompleta</option><option value="todos">Todos</option></select></div>
+      <div id="btn-novo"><button class="btn" onclick="abrir()">+ Novo produto</button></div>
+    </div>
+    <p class="mudo" id="resumo"></p>
+    <table class="lista">
+      <thead><tr><th class="num">Cód.</th><th>Produto</th><th>Porção</th><th>Validade</th><th>Ficha</th><th></th></tr></thead>
+      <tbody id="tb"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-fundo" id="modal">
+  <div class="modal">
+    <h2 id="m-titulo">Ficha nutricional</h2>
+    <form id="form">
+      <input type="hidden" id="f-id">
+      <div class="linha">
+        <div class="campo curto"><label>Código</label><input id="f-codigo" type="number" min="1" required></div>
+        <div class="campo"><label>Nome na etiqueta (1ª linha)</label><input id="f-nome" required maxlength="80" placeholder="PC CARNE DE SOL 400G (BOA)"></div>
+      </div>
+      <div class="linha" style="margin-top:10px">
+        <div class="campo"><label>Descrição (2ª linha)</label><input id="f-descricao" maxlength="80" placeholder="CURA POR SALGA."></div>
+        <div class="campo curto"><label>Validade (dias)</label><input id="f-validade" type="number" min="1" value="90"></div>
+      </div>
+      <div class="linha" style="margin-top:10px">
+        <div class="campo curto"><label>Porções/embalagem</label><input id="f-porcoes" type="number" step="0.5" min="0.5"></div>
+        <div class="campo curto"><label>Porção (g)</label><input id="f-porcao" type="number" step="0.1" min="0.1"></div>
+        <div class="campo"><label>Medida caseira</label><input id="f-medida" maxlength="60" placeholder="2 XÍCARAS OU 2 BIFES"></div>
+      </div>
+      <div class="linha" style="margin-top:10px">
+        <div class="campo"><label>Conservação e temperatura</label><input id="f-conservacao" maxlength="60" value="-18ºC até 90 dias"></div>
+        <div class="campo"><label>Aviso</label><input id="f-aviso" maxlength="60" value="Não recongelar"></div>
+      </div>
+
+      <div class="dois" style="margin-top:16px">
+        <div>
+          <table class="ficha">
+            <thead><tr><th>Nutriente</th><th style="text-align:right">por 100 g</th><th style="text-align:right">na porção</th><th style="text-align:right">%VD</th></tr></thead>
+            <tbody id="f-nutri"></tbody>
+          </table>
+          <p class="mudo">Digite só a coluna "por 100 g". Porção e %VD são calculados pela porção (IN 75/2020); açúcares totais e gorduras trans não têm VD.</p>
+        </div>
+        <div>
+          <div class="campo"><label>Selo (imagem opcional — fica vazio se não houver)</label>
+            <input id="f-selo-arq" type="file" accept="image/png,image/jpeg">
+            <div style="display:flex;gap:10px;align-items:center;margin-top:6px"><img id="f-selo-img" alt="" style="max-height:60px;display:none;border:1px solid #ddd"><button type="button" class="btn sec peq" id="f-selo-limpar" style="display:none" onclick="limparSelo()">remover selo</button></div>
+          </div>
+          <div id="previa" style="margin-top:14px;transform:scale(.9);transform-origin:top left"></div>
+          <p class="mudo">Prévia da etiqueta (sem lote).</p>
+        </div>
+      </div>
+      <div id="m-aviso" class="aviso"></div>
+      <div class="modal-acoes">
+        <button type="button" class="btn sec" onclick="fechar()">Cancelar</button>
+        <button type="button" class="btn sec" id="btn-status" onclick="alternarStatus()" style="display:none"></button>
+        <button class="btn" id="btn-salvar">Salvar ficha</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="comum.js"></script>
+<script>
+const s = exigirLogin(["nutricao", "producao"]);
+const $ = (id) => document.getElementById(id);
+document.getElementById("cab").innerHTML = cabecalho("Fichas nutricionais", "produtos.html");
+const podeEditar = s.usuario.perfil === "admin" || s.usuario.perfil === "nutricao";
+if (!podeEditar) $("btn-novo").style.display = "none";
+let produtos = [];
+let selo = undefined; // undefined = não mexeu; "" = remover; "data:..." = novo
+
+$("f-nutri").innerHTML = NUTRIENTES.map((n) => `<tr><td class="${n.sub ? "sub" : ""}">${n.rotulo} (${n.unidade})</td>
+  <td style="text-align:right"><input id="n-${n.chave}" inputmode="decimal" ${podeEditar ? "" : "disabled"}></td><td class="calc" id="p-${n.chave}">—</td><td class="calc" id="v-${n.chave}">—</td></tr>`).join("");
+
+async function carregar() {
+  const d = await api("/produtos");
+  produtos = d.produtos;
+  render();
+}
+function render() {
+  const t = normBusca($("busca").value);
+  const f = $("filtro").value;
+  const lista = produtos.filter((p) => (f === "todos" || (f === "ativos" ? p.ativo : (p.ativo && !p.calc.completa))) && (!t || normBusca(p.nome).includes(t) || String(p.codigo).includes(t)));
+  $("resumo").textContent = lista.length + " produto(s) · " + produtos.filter((p) => p.ativo && p.calc.completa).length + " com ficha completa · " + produtos.filter((p) => p.ativo && !p.calc.completa).length + " incompleta(s)";
+  $("tb").innerHTML = lista.map((p) => `<tr>
+    <td class="num">${p.codigo}</td>
+    <td><b>${esc(p.nome)}</b><br><span class="mudo">${esc(p.descricao || "")}</span></td>
+    <td>${p.porcao_g ? fmt1(p.porcao_g) + " g" : "—"}</td>
+    <td>${p.validade_dias} dias</td>
+    <td>${!p.ativo ? '<span class="tag off">desativado</span>' : p.calc.completa ? '<span class="tag ok">completa</span>' : '<span class="tag falta">incompleta</span>'}</td>
+    <td style="text-align:right;white-space:nowrap"><button class="btn sec peq" onclick="abrir('${p.id}')">${podeEditar ? "Editar" : "Ver"}</button> <a class="btn sec peq" style="text-decoration:none" href="etiqueta.html?produto=${p.id}" target="_blank">Prévia</a></td>
+  </tr>`).join("") || '<tr><td colspan="6" class="mudo">Nenhum produto.</td></tr>';
+}
+$("busca").oninput = render; $("filtro").onchange = render;
+
+const CAMPOS = { codigo: "f-codigo", nome: "f-nome", descricao: "f-descricao", validade_dias: "f-validade", porcoes_por_embalagem: "f-porcoes", porcao_g: "f-porcao", medida_caseira: "f-medida", conservacao: "f-conservacao", aviso: "f-aviso" };
+function lerForm() {
+  const p = {};
+  for (const k in CAMPOS) p[k] = $(CAMPOS[k]).value;
+  for (const n of NUTRIENTES) p[n.chave] = $("n-" + n.chave).value;
+  p.id = $("f-id").value || undefined;
+  if (selo !== undefined) p.selo = selo;
+  return p;
+}
+function recalcular() {
+  const p = lerForm();
+  const c = calcular(p);
+  for (const l of c.linhas) {
+    $("p-" + l.chave).textContent = fmt1(l.porcao);
+    $("v-" + l.chave).textContent = l.vd === null ? (VD[l.chave] === null ? "—" : "—") : l.vd + "%";
+    $("n-" + l.chave).className = l.por100 === null ? "falta" : "";
+  }
+  const seloAtual = selo !== undefined ? selo : ($("f-selo-img").style.display !== "none" ? $("f-selo-img").src : null);
+  $("previa").innerHTML = htmlEtiqueta({ ...p, selo: seloAtual || null }, null);
+}
+document.querySelectorAll("#form input").forEach((i) => i.addEventListener("input", recalcular));
+
+async function abrir(id) {
+  $("form").reset(); $("f-id").value = ""; selo = undefined; aviso($("m-aviso"), "");
+  $("f-selo-img").style.display = "none"; $("f-selo-limpar").style.display = "none";
+  $("btn-status").style.display = "none";
+  $("m-titulo").textContent = id ? "Ficha nutricional" : "Novo produto";
+  if (id) {
+    const d = await api("/produtos/" + id);
+    const p = d.produto;
+    $("f-id").value = p.id;
+    for (const k in CAMPOS) $(CAMPOS[k]).value = p[k] ?? "";
+    for (const n of NUTRIENTES) $("n-" + n.chave).value = p[n.chave] ?? "";
+    if (p.selo) { $("f-selo-img").src = p.selo; $("f-selo-img").style.display = ""; $("f-selo-limpar").style.display = podeEditar ? "" : "none"; }
+    if (podeEditar) { $("btn-status").style.display = ""; $("btn-status").textContent = p.ativo ? "Desativar produto" : "Reativar produto"; $("btn-status").dataset.ativo = p.ativo ? "1" : "0"; }
+  } else {
+    const max = Math.max(0, ...produtos.map((p) => p.codigo));
+    $("f-codigo").value = max + 1;
+  }
+  document.querySelectorAll("#form input:not([type=file]), #form select").forEach((i) => i.disabled = !podeEditar);
+  $("f-selo-arq").disabled = !podeEditar;
+  $("btn-salvar").style.display = podeEditar ? "" : "none";
+  recalcular();
+  $("modal").classList.add("aberto");
+}
+function fechar() { $("modal").classList.remove("aberto"); }
+$("f-selo-arq").onchange = () => {
+  const f = $("f-selo-arq").files[0]; if (!f) return;
+  if (f.size > 300 * 1024) { aviso($("m-aviso"), "Imagem do selo muito grande (máx. 300 KB).", "erro"); $("f-selo-arq").value = ""; return; }
+  const r = new FileReader();
+  r.onload = () => { selo = r.result; $("f-selo-img").src = selo; $("f-selo-img").style.display = ""; $("f-selo-limpar").style.display = ""; recalcular(); };
+  r.readAsDataURL(f);
+};
+function limparSelo() { selo = ""; $("f-selo-img").style.display = "none"; $("f-selo-limpar").style.display = "none"; $("f-selo-arq").value = ""; recalcular(); }
+$("form").onsubmit = async (e) => {
+  e.preventDefault(); aviso($("m-aviso"), "");
+  $("btn-salvar").disabled = true;
+  try {
+    const d = await api("/produtos", lerForm());
+    aviso($("m-aviso"), d.produto.calc.completa ? "Ficha salva e completa." : "Ficha salva — ainda incompleta (faltam valores, porção ou medida caseira).", d.produto.calc.completa ? "ok" : "erro");
+    $("f-id").value = d.produto.id;
+    await carregar();
+    if (d.produto.calc.completa) setTimeout(fechar, 700);
+  } catch (err) { aviso($("m-aviso"), err.message, "erro"); }
+  $("btn-salvar").disabled = false;
+};
+async function alternarStatus() {
+  const id = $("f-id").value; const ativo = $("btn-status").dataset.ativo !== "1";
+  if (!confirm(ativo ? "Reativar este produto?" : "Desativar este produto? Ele some das listas e não gera lote.")) return;
+  try { await api("/produtos/" + id + "/status", { ativo }); await carregar(); fechar(); } catch (err) { aviso($("m-aviso"), err.message, "erro"); }
+}
+carregar().catch((e) => alert(e.message));
+</script>
+</body>
+</html>

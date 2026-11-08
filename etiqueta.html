@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Etiqueta · Onishi</title>
+<link rel="stylesheet" href="comum.css">
+<style>
+  body { background: #e9e6e1; }
+  .barra { position: sticky; top: 0; background: #fff; border-bottom: 1px solid var(--borda); padding: 10px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; z-index: 2; }
+  .barra .campo { flex: 0 0 110px; }
+</style>
+</head>
+<body>
+<div class="barra nao-imprime">
+  <b id="b-titulo">Etiqueta</b>
+  <span class="mudo" id="b-info"></span>
+  <span style="flex:1"></span>
+  <div class="campo" id="b-qtd-campo"><label>Quantidade</label><input id="b-qtd" type="number" min="1" max="500" value="1"></div>
+  <button class="btn" id="b-imprimir" onclick="imprimir()">Imprimir</button>
+  <span class="mudo">Na impressão escolha a <b>ZDesigner ZD220</b>, papel 10 × 6 cm, margens nenhuma.</span>
+</div>
+<div class="folha" id="folha"></div>
+<script src="comum.js"></script>
+<script>
+const s = exigirLogin(["producao", "nutricao"]);
+const $ = (id) => document.getElementById(id);
+const q = new URLSearchParams(location.search);
+let produto = null, lote = null;
+const podeImprimir = s.usuario.perfil === "admin" || s.usuario.perfil === "producao";
+
+function render() {
+  const n = lote ? Math.max(1, Math.min(500, Number($("b-qtd").value) || 1)) : 1;
+  $("folha").innerHTML = Array.from({ length: n }, () => htmlEtiqueta(produto, lote)).join("");
+  document.title = (lote ? "Lote " + lote7(lote.numero) + " · " : "Prévia · ") + produto.nome;
+}
+async function carregar() {
+  if (q.get("lote")) {
+    const d = await api("/lotes/" + q.get("lote"));
+    lote = d.lote; produto = d.produto;
+    $("b-titulo").textContent = "Lote " + lote7(lote.numero);
+    $("b-info").textContent = produto.nome + " · fabricação " + fmtData(lote.data_fabricacao) + " · validade " + fmtData(lote.data_validade);
+    $("b-qtd").value = Math.max(1, Number(q.get("q")) || lote.quantidade || 1);
+    if (!podeImprimir) $("b-imprimir").style.display = "none";
+  } else if (q.get("produto")) {
+    const d = await api("/produtos/" + q.get("produto"));
+    produto = d.produto;
+    $("b-titulo").textContent = "Prévia (sem lote)";
+    $("b-info").textContent = produto.nome + (produto.calc.completa ? "" : " · ficha incompleta");
+    $("b-qtd-campo").style.display = "none";
+  } else { $("b-info").textContent = "Nada para mostrar."; return; }
+  render();
+  if (q.get("auto") === "1" && lote && podeImprimir) setTimeout(imprimir, 400);
+}
+$("b-qtd").oninput = render;
+async function imprimir() {
+  render();
+  window.print();
+  if (lote) { try { await api("/lotes/" + lote.id + "/impresso", { quantidade: Number($("b-qtd").value) }); } catch (_) {} }
+}
+carregar().catch((e) => { $("b-info").textContent = e.message; });
+</script>
+</body>
+</html>

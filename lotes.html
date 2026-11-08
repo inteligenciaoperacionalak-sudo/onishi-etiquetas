@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lotes e impressão · Onishi</title>
+<link rel="stylesheet" href="comum.css">
+</head>
+<body>
+<div id="cab"></div>
+<div class="wrap">
+  <div class="card" id="novo">
+    <h2 style="margin:0 0 10px;font-size:18px">Novo lote <span class="mudo" id="prox"></span></h2>
+    <form id="form">
+      <div class="linha">
+        <div class="campo" style="position:relative"><label>Produto</label>
+          <input id="f-busca" autocomplete="off" placeholder="Digite parte do nome ou o código" required>
+          <input type="hidden" id="f-produto">
+          <div id="sug" class="card" style="position:absolute;top:100%;left:0;right:0;z-index:5;display:none;max-height:260px;overflow:auto;padding:4px;margin:0"></div>
+        </div>
+        <div class="campo curto"><label>Fabricação</label><input id="f-data" type="date" required></div>
+        <div class="campo curto"><label>Validade (dias)</label><input id="f-validade" type="number" min="1" required></div>
+        <div class="campo curto"><label>Vence em</label><input id="f-vence" disabled></div>
+        <div class="campo curto"><label>Etiquetas</label><input id="f-qtd" type="number" min="1" max="500" value="1" required></div>
+        <div><button class="btn" id="btn-gerar">Gerar lote e imprimir</button></div>
+      </div>
+      <div id="aviso" class="aviso"></div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="linha"><div class="campo"><label>Buscar nos lotes</label><input id="busca" class="busca" placeholder="Produto ou número do lote"></div></div>
+    <table class="lista">
+      <thead><tr><th class="num">Lote</th><th>Produto</th><th>Fabricação</th><th>Validade</th><th class="num">Etiq.</th><th>Quem</th><th></th></tr></thead>
+      <tbody id="tb"></tbody>
+    </table>
+  </div>
+</div>
+<script src="comum.js"></script>
+<script>
+const s = exigirLogin(["producao"]);
+const $ = (id) => document.getElementById(id);
+document.getElementById("cab").innerHTML = cabecalho("Lotes e impressão", "lotes.html");
+const podeGerar = s.usuario.perfil === "admin" || s.usuario.perfil === "producao";
+if (!podeGerar) $("novo").style.display = "none";
+let produtos = [], lotes = [];
+$("f-data").value = hojeISO();
+
+async function carregar() {
+  const [dp, dl] = await Promise.all([api("/produtos"), api("/lotes?limite=300")]);
+  produtos = dp.produtos.filter((p) => p.ativo);
+  lotes = dl.lotes;
+  $("prox").textContent = "— será o nº " + lote7(dl.proximo_numero);
+  render();
+}
+function render() {
+  const t = normBusca($("busca").value);
+  const lista = lotes.filter((l) => !t || normBusca(l.produto?.nome).includes(t) || lote7(l.numero).includes(t));
+  $("tb").innerHTML = lista.map((l) => `<tr>
+    <td class="num"><b>${lote7(l.numero)}</b></td>
+    <td>${esc(l.produto?.nome || "—")}</td>
+    <td>${fmtData(l.data_fabricacao)}</td>
+    <td>${fmtData(l.data_validade)} <span class="mudo">(${l.validade_dias} d)</span></td>
+    <td class="num">${l.quantidade || "—"}${l.impressoes ? ' <span class="mudo">· ' + l.impressoes + "x</span>" : ""}</td>
+    <td class="mudo">${esc(l.criado_por)}<br>${fmtDataHora(l.criado_em)}</td>
+    <td style="text-align:right">${podeGerar ? `<a class="btn sec peq" style="text-decoration:none" href="etiqueta.html?lote=${l.id}&q=${l.quantidade || 1}" target="_blank">Imprimir</a>` : ""}</td>
+  </tr>`).join("") || '<tr><td colspan="7" class="mudo">Nenhum lote.</td></tr>';
+}
+$("busca").oninput = render;
+
+// busca de produto com sugestões
+function escolher(p) {
+  $("f-produto").value = p.id; $("f-busca").value = p.codigo + " · " + p.nome;
+  $("f-validade").value = p.validade_dias; $("sug").style.display = "none"; vence();
+  if (!p.calc.completa) aviso($("aviso"), "A ficha deste produto está incompleta — não dá para gerar lote. Peça à nutrição para completar.", "erro"); else aviso($("aviso"), "");
+}
+$("f-busca").oninput = () => {
+  $("f-produto").value = "";
+  const t = normBusca($("f-busca").value);
+  if (!t) { $("sug").style.display = "none"; return; }
+  const l = produtos.filter((p) => normBusca(p.nome).includes(t) || String(p.codigo).startsWith(t)).slice(0, 12);
+  $("sug").innerHTML = l.map((p) => `<div style="padding:7px 8px;cursor:pointer;border-radius:6px" onmousedown="escolher(produtos.find(x=>x.id==='${p.id}'))"><b>${p.codigo}</b> · ${esc(p.nome)} ${p.calc.completa ? "" : '<span class="tag falta">ficha incompleta</span>'}</div>`).join("") || '<div class="mudo" style="padding:7px">Nenhum produto ativo com esse nome.</div>';
+  $("sug").style.display = "";
+};
+$("f-busca").onblur = () => setTimeout(() => $("sug").style.display = "none", 150);
+function vence() { $("f-vence").value = $("f-data").value && $("f-validade").value ? fmtData(somaDias($("f-data").value, $("f-validade").value)) : ""; }
+$("f-data").oninput = vence; $("f-validade").oninput = vence;
+
+$("form").onsubmit = async (e) => {
+  e.preventDefault(); aviso($("aviso"), "");
+  if (!$("f-produto").value) return aviso($("aviso"), "Escolha o produto na lista de sugestões.", "erro");
+  $("btn-gerar").disabled = true;
+  try {
+    const d = await api("/lotes", { produto_id: $("f-produto").value, data_fabricacao: $("f-data").value, validade_dias: Number($("f-validade").value), quantidade: Number($("f-qtd").value) });
+    aviso($("aviso"), "Lote " + lote7(d.lote.numero) + " gerado. Abrindo a impressão…");
+    window.open("etiqueta.html?lote=" + d.lote.id + "&q=" + d.lote.quantidade, "_blank");
+    $("form").reset(); $("f-data").value = hojeISO(); $("f-produto").value = ""; $("f-qtd").value = 1;
+    await carregar();
+  } catch (err) { aviso($("aviso"), err.message, "erro"); }
+  $("btn-gerar").disabled = false;
+};
+carregar().catch((e) => alert(e.message));
+</script>
+</body>
+</html>

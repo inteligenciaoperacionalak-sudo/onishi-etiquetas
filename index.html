@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Etiquetas Onishi</title>
+<link rel="stylesheet" href="comum.css">
+</head>
+<body>
+<div class="centro">
+  <div class="logo-login"><span class="kanji">大西</span><div>ONISHI DISTRIBUIDORA</div><div class="mudo" style="font-weight:400;letter-spacing:0">Etiquetas nutricionais</div></div>
+
+  <div id="login" class="card" style="display:none">
+    <form id="f-login">
+      <div class="campo"><label>Usuário</label><input id="l-login" autocomplete="username" autocapitalize="off" required></div>
+      <div class="campo" style="margin-top:10px"><label>Senha</label><input id="l-senha" type="password" autocomplete="current-password" required></div>
+      <div id="l-aviso" class="aviso"></div>
+      <button class="btn" style="width:100%">Entrar</button>
+    </form>
+  </div>
+
+  <div id="menu" style="display:none">
+    <p class="mudo" id="m-quem"></p>
+    <div class="menu" id="m-links"></div>
+    <p style="margin-top:16px"><button class="lnk" onclick="sair()">sair</button> · <button class="lnk" onclick="abrirSenha()">trocar minha senha</button></p>
+  </div>
+
+  <div id="senha" class="card" style="display:none">
+    <h2 style="margin-top:0;font-size:18px">Trocar senha</h2>
+    <p class="mudo" id="s-motivo"></p>
+    <form id="f-senha">
+      <div class="campo"><label>Senha atual</label><input id="s-atual" type="password" required></div>
+      <div class="campo" style="margin-top:10px"><label>Nova senha (mín. 6)</label><input id="s-nova" type="password" required minlength="6"></div>
+      <div class="campo" style="margin-top:10px"><label>Repita a nova senha</label><input id="s-nova2" type="password" required></div>
+      <div id="s-aviso" class="aviso"></div>
+      <button class="btn" style="width:100%">Salvar nova senha</button>
+    </form>
+  </div>
+</div>
+<script src="comum.js"></script>
+<script>
+const q = new URLSearchParams(location.search);
+const $ = (id) => document.getElementById(id);
+const TELAS = [
+  ["lotes.html", "Lotes e impressão", "Gerar lote, escolher a quantidade e imprimir as etiquetas", ["producao"]],
+  ["produtos.html", "Fichas nutricionais", "Cadastrar produtos e os valores por 100 g (porção e %VD são calculados)", ["nutricao", "producao"]],
+  ["usuarios.html", "Usuários", "Criar acessos, definir perfis e senhas", []],
+];
+function mostrar(id) { ["login", "menu", "senha"].forEach((x) => $(x).style.display = x === id ? "" : "none"); }
+function montarMenu() {
+  const s = sessao(); const u = s.usuario;
+  $("m-quem").textContent = "Olá, " + u.nome + " (" + u.perfil_nome + ")";
+  $("m-links").innerHTML = TELAS.filter(([, , , p]) => u.perfil === "admin" || p.includes(u.perfil))
+    .map(([h, t, d]) => `<a href="${h}"><b>${t}</b><span class="mudo">${d}</span></a>`).join("");
+  mostrar("menu");
+}
+function abrirSenha(motivo) { $("s-motivo").textContent = motivo || ""; mostrar("senha"); $("s-atual").focus(); }
+async function inicio() {
+  const s = sessao();
+  if (q.get("expirou")) aviso($("l-aviso"), "Sua sessão expirou. Entre de novo.", "erro");
+  if (!s) { mostrar("login"); $("l-login").focus(); return; }
+  try { const d = await api("/eu"); s.usuario = d.usuario; guardarSessao(s); } catch (_) { guardarSessao(null); mostrar("login"); return; }
+  if (s.usuario.trocar_senha) return abrirSenha("Primeiro acesso: escolha sua própria senha para continuar.");
+  const volta = q.get("volta");
+  if (volta && /^[a-z]+\.html/.test(volta)) { location.href = volta; return; }
+  montarMenu();
+}
+$("f-login").onsubmit = async (e) => {
+  e.preventDefault(); aviso($("l-aviso"), "");
+  try {
+    const d = await api("/login", { login: $("l-login").value, senha: $("l-senha").value });
+    guardarSessao({ token: d.token, usuario: d.usuario });
+    inicio();
+  } catch (err) { aviso($("l-aviso"), err.message, "erro"); }
+};
+$("f-senha").onsubmit = async (e) => {
+  e.preventDefault(); aviso($("s-aviso"), "");
+  if ($("s-nova").value !== $("s-nova2").value) return aviso($("s-aviso"), "As senhas não conferem.", "erro");
+  try {
+    await api("/senha", { atual: $("s-atual").value, nova: $("s-nova").value });
+    const s = sessao(); s.usuario.trocar_senha = false; guardarSessao(s);
+    $("f-senha").reset(); montarMenu();
+  } catch (err) { aviso($("s-aviso"), err.message, "erro"); }
+};
+inicio();
+</script>
+</body>
+</html>

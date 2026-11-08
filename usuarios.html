@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Usuários · Onishi</title>
+<link rel="stylesheet" href="comum.css">
+</head>
+<body>
+<div id="cab"></div>
+<div class="wrap">
+  <div class="card">
+    <h2 style="margin:0 0 10px;font-size:18px" id="f-titulo">Novo usuário</h2>
+    <form id="form">
+      <input type="hidden" id="f-id">
+      <div class="linha">
+        <div class="campo"><label>Nome</label><input id="f-nome" required maxlength="60"></div>
+        <div class="campo medio"><label>Login</label><input id="f-login" required autocapitalize="off" pattern="[a-z0-9._-]{3,40}" placeholder="ex.: maria"></div>
+        <div class="campo medio"><label>Perfil</label><select id="f-perfil"><option value="producao">Produção (lotes e impressão)</option><option value="nutricao">Nutrição (fichas)</option><option value="admin">Administrador (tudo)</option></select></div>
+        <div class="campo medio"><label id="l-senha">Senha inicial</label><input id="f-senha" type="text" minlength="6" placeholder="mín. 6"></div>
+        <div><button class="btn">Salvar</button> <button type="button" class="btn sec" id="btn-cancel" style="display:none" onclick="limpar()">Cancelar</button></div>
+      </div>
+      <div id="aviso" class="aviso"></div>
+      <p class="mudo">A pessoa é obrigada a trocar a senha no primeiro acesso.</p>
+    </form>
+  </div>
+  <div class="card">
+    <table class="lista">
+      <thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Situação</th><th>Último acesso</th><th></th></tr></thead>
+      <tbody id="tb"></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h2 style="margin:0 0 10px;font-size:18px">Registro (últimas ações)</h2>
+    <table class="lista"><thead><tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Detalhes</th></tr></thead><tbody id="log"></tbody></table>
+  </div>
+</div>
+<script src="comum.js"></script>
+<script>
+exigirLogin([]);
+const $ = (id) => document.getElementById(id);
+document.getElementById("cab").innerHTML = cabecalho("Usuários", "usuarios.html");
+let usuarios = [];
+async function carregar() {
+  const [du, dl] = await Promise.all([api("/usuarios"), api("/log")]);
+  usuarios = du.usuarios;
+  $("tb").innerHTML = usuarios.map((u) => `<tr>
+    <td><b>${esc(u.nome)}</b></td><td>${esc(u.login)}</td><td>${esc(u.perfil_nome)}</td>
+    <td>${u.ativo ? '<span class="tag ok">ativo</span>' : '<span class="tag off">desativado</span>'}${u.trocar_senha ? ' <span class="tag">senha provisória</span>' : ""}</td>
+    <td class="mudo">${fmtDataHora(u.ultimo_acesso)}</td>
+    <td style="text-align:right;white-space:nowrap"><button class="btn sec peq" onclick="editar('${u.id}')">Editar</button> <button class="btn sec peq" onclick="status('${u.id}', ${!u.ativo})">${u.ativo ? "Desativar" : "Reativar"}</button></td>
+  </tr>`).join("");
+  $("log").innerHTML = dl.log.map((l) => `<tr><td class="mudo">${fmtDataHora(l.quando)}</td><td>${esc(l.usuario)}</td><td>${esc(l.acao)}</td><td class="mudo">${esc(JSON.stringify(l.detalhes || {}).slice(1, -1).replace(/"/g, ""))}</td></tr>`).join("");
+}
+function limpar() { $("form").reset(); $("f-id").value = ""; $("f-titulo").textContent = "Novo usuário"; $("l-senha").textContent = "Senha inicial"; $("f-senha").required = true; $("btn-cancel").style.display = "none"; aviso($("aviso"), ""); }
+function editar(id) {
+  const u = usuarios.find((x) => x.id === id); if (!u) return;
+  $("f-id").value = u.id; $("f-nome").value = u.nome; $("f-login").value = u.login; $("f-perfil").value = u.perfil; $("f-senha").value = "";
+  $("f-titulo").textContent = "Editar: " + u.nome; $("l-senha").textContent = "Nova senha (vazio = manter)"; $("f-senha").required = false; $("btn-cancel").style.display = "";
+  window.scrollTo(0, 0);
+}
+async function status(id, ativo) {
+  const u = usuarios.find((x) => x.id === id);
+  if (!confirm((ativo ? "Reativar " : "Desativar ") + u.nome + "?")) return;
+  try { await api("/usuarios", { id, nome: u.nome, login: u.login, perfil: u.perfil, ativo }); await carregar(); } catch (e) { alert(e.message); }
+}
+$("f-senha").required = true;
+$("form").onsubmit = async (e) => {
+  e.preventDefault(); aviso($("aviso"), "");
+  try {
+    const d = await api("/usuarios", { id: $("f-id").value || undefined, nome: $("f-nome").value, login: $("f-login").value, perfil: $("f-perfil").value, senha: $("f-senha").value });
+    aviso($("aviso"), "Salvo: " + d.usuario.nome + " (" + d.usuario.login + ").");
+    limpar(); await carregar();
+  } catch (err) { aviso($("aviso"), err.message, "erro"); }
+};
+carregar().catch((e) => alert(e.message));
+</script>
+</body>
+</html>
