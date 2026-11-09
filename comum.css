@@ -73,33 +73,36 @@ table.ficha input.falta { border-color: var(--erro); background: #fff5f5; }
 .menu a b { display: block; color: var(--verm); margin-bottom: 4px; }
 
 /* ---------------------------------------------------- etiqueta 10 × 6 cm --- */
-.etq { width: 100mm; height: 60mm; padding: 2mm 2.5mm 1.5mm; display: grid; grid-template-columns: 1fr 30mm; column-gap: 2mm; font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff; overflow: hidden; break-after: page; page-break-after: always; }
+.etq { width: 100mm; height: 60mm; padding: 1.8mm 2.5mm 1.2mm; display: grid; grid-template-columns: 1fr 30mm; grid-template-rows: 1fr auto; column-gap: 2mm; font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff; overflow: hidden; break-after: page; page-break-after: always; }
 .etq .esq { display: flex; flex-direction: column; min-width: 0; }
-.etq .topo { display: flex; gap: 1.5mm; align-items: flex-start; height: 9mm; }
-.etq .logo { width: 9mm; height: 9mm; object-fit: contain; }
+.etq .topo { display: flex; gap: 1.5mm; align-items: flex-start; height: 8.5mm; }
+.etq .logo { width: 8.5mm; height: 8.5mm; object-fit: contain; }
 .etq .titulos { flex: 1; min-width: 0; text-align: center; padding-top: .5mm; }
 .etq .t1 { font-weight: bold; font-size: 9pt; line-height: 1.15; white-space: nowrap; overflow: hidden; }
 .etq .t2 { font-weight: bold; font-size: 7.5pt; line-height: 1.15; white-space: nowrap; overflow: hidden; }
-.etq .info { border: .4mm solid #000; padding: .4mm 1mm; font-size: 6.5pt; line-height: 1.2; margin-top: .5mm; }
+.etq .info { border: .4mm solid #000; padding: .3mm 1mm; font-size: 6.2pt; line-height: 1.15; margin-top: .4mm; }
 .etq .info-t { font-weight: bold; text-align: center; font-size: 7pt; }
-.etq table.tab { width: 100%; border-collapse: collapse; font-size: 6.4pt; line-height: 1.05; margin-top: .6mm; }
+.etq table.tab { width: 100%; border-collapse: collapse; font-size: 6.1pt; line-height: 1.02; margin-top: .5mm; }
 .etq table.tab th { font-weight: bold; text-align: right; padding: 0 .6mm .3mm; font-size: 7pt; }
 .etq table.tab th:first-child { text-align: left; }
-.etq table.tab td { padding: .18mm .6mm; border-top: .3mm solid #000; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.etq table.tab td { padding: .16mm .6mm; border-top: .3mm solid #000; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .etq table.tab td.rot { text-align: left; }
 .etq table.tab tr.sub td { border-top: .15mm solid #000; }
 .etq table.tab tr.sub td.rot { padding-left: 2.5mm; }
 .etq table.tab tbody tr:last-child td { border-bottom: .4mm solid #000; }
-.etq .rodape { font-size: 5.2pt; margin-top: .4mm; }
-.etq .dir { display: flex; flex-direction: column; gap: 1mm; padding-top: 9.5mm; }
-.etq .caixa { border: .4mm solid #000; border-radius: 3mm; text-align: center; padding: .5mm 1mm .7mm; line-height: 1.1; }
-.etq .cx-t { font-size: 5.8pt; font-weight: bold; }
-.etq .cx-v { font-size: 9pt; font-weight: bold; }
-.etq .cons { text-align: center; border-top: .4mm dotted #000; border-bottom: .4mm dotted #000; padding: .6mm 0; margin-top: .5mm; line-height: 1.25; }
+.etq .rodape { font-size: 5pt; margin-top: .3mm; }
+.etq .empresa { grid-column: 1 / -1; border-top: .3mm solid #000; margin-top: .5mm; padding-top: .3mm; font-size: 5.2pt; line-height: 1.2; text-align: center; }
+.etq .empresa b { font-size: 5.4pt; }
+.etq .dir { display: flex; flex-direction: column; gap: .7mm; padding-top: 8.6mm; }
+.etq .caixa { border: .4mm solid #000; border-radius: 3mm; text-align: center; padding: .3mm 1mm .4mm; line-height: 1.05; }
+.etq .cx-t { font-size: 5.5pt; font-weight: bold; }
+.etq .cx-v { font-size: 8.5pt; font-weight: bold; }
+.etq .cons { text-align: center; border-top: .4mm dotted #000; border-bottom: .4mm dotted #000; padding: .4mm 0; margin-top: .3mm; line-height: 1.15; }
 .etq .cons-t { font-size: 6.3pt; font-weight: bold; }
 .etq .cons-v { font-size: 6pt; font-weight: bold; }
-.etq .selo { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 9mm; }
-.etq .selo img { max-height: 11mm; max-width: 26mm; object-fit: contain; }
+.etq .selo { display: flex; align-items: center; justify-content: center; margin-top: .2mm; }
+.etq .selo .sim { height: 10.5mm; width: 10.5mm; }
+.etq .selo img { max-height: 9mm; max-width: 26mm; object-fit: contain; }
 
 @media print {
   @page { size: 100mm 60mm; margin: 0; }

@@ -1,4 +1,19 @@
 // Etiquetas nutricionais — Onishi Distribuidora. Código comum das páginas.
+// Dados do produtor impressos no rodapé da etiqueta
+const EMPRESA = { razao: "Cabana do Bosque e Alimentos LTDA", cnpj: "00.893.166/0002-65", endereco: "Rua do Telégrafo, S/N, Taperapuan, Porto Seguro - BA", telefone: "(73) 99969-3475", email: "controle1@complexotoatoa.com.br" };
+// Selo de inspeção padrão (S.I.M. Porto Seguro) — usado quando o produto não tem imagem própria de selo
+const SIM_REGISTRO = "022/26";
+function seloSIM() {
+  return `<svg class="sim" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="Inspecionado S.I.M. ${SIM_REGISTRO}">
+    <defs><path id="arcTop" d="M 18,50 A 32,32 0 0 1 82,50"/><path id="arcBot" d="M 12,50 A 38,38 0 0 0 88,50"/></defs>
+    <circle cx="50" cy="50" r="48" fill="#fff" stroke="#000" stroke-width="3.5"/>
+    <circle cx="50" cy="50" r="43" fill="none" stroke="#000" stroke-width="1"/>
+    <text font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="11" fill="#000" letter-spacing=".8"><textPath href="#arcTop" startOffset="50%" text-anchor="middle">INSPECIONADO</textPath></text>
+    <text font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="9.5" fill="#000" letter-spacing=".5"><textPath href="#arcBot" startOffset="50%" text-anchor="middle">PORTO SEGURO - BA</textPath></text>
+    <text x="50" y="47" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="11" fill="#000">${SIM_REGISTRO}</text>
+    <text x="50" y="65" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="18" fill="#000">S.I.M.</text>
+  </svg>`;
+}
 const API = "https://wughmiprdbycsmkjsslj.supabase.co/functions/v1/etiquetas/api";
 
 // Valores diários de referência (IN 75/2020) — iguais aos da função. null = sem VD (imprime "—")
@@ -91,8 +106,9 @@ function htmlEtiqueta(produto, lote) {
       <div class="caixa"><div class="cx-t">VALIDADE</div><div class="cx-v">${lote ? fmtData(lote.data_validade) : "__/__/____"}</div></div>
       <div class="caixa"><div class="cx-t">LOTE</div><div class="cx-v">${lote ? lote7(lote.numero) : "0000000"}</div></div>
       <div class="cons"><div class="cons-t">Conservação e Temperatura</div><div class="cons-v">${esc(produto.conservacao || "")}</div><div class="cons-v">Aviso: ${esc(produto.aviso || "")}</div></div>
-      <div class="selo">${produto.selo ? `<img src="${produto.selo}" alt="">` : ""}</div>
+      <div class="selo">${produto.selo ? `<img src="${produto.selo}" alt="">` : seloSIM()}</div>
     </div>
+    <div class="empresa"><b>Produzido por ${esc(EMPRESA.razao)}</b> · CNPJ ${esc(EMPRESA.cnpj)}<br>${esc(EMPRESA.endereco)} · Tel. ${esc(EMPRESA.telefone)} · ${esc(EMPRESA.email)}</div>
   </div>`;
 }
 
