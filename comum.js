@@ -9,8 +9,8 @@ function seloSIM() {
     <circle cx="50" cy="50" r="48" fill="#fff" stroke="#000" stroke-width="3.5"/>
     <text font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="11" fill="#000" letter-spacing=".8"><textPath href="#arcTop" startOffset="50%" text-anchor="middle">INSPECIONADO</textPath></text>
     <text font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="9.5" fill="#000" letter-spacing=".5"><textPath href="#arcBot" startOffset="50%" text-anchor="middle">PORTO SEGURO - BA</textPath></text>
-    <text x="50" y="47" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="11" fill="#000">${SIM_REGISTRO}</text>
-    <text x="50" y="65" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="18" fill="#000">S.I.M.</text>
+    <text x="50" y="49" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="15.5" fill="#000" stroke="#000" stroke-width="0.75" stroke-linejoin="round" letter-spacing="0.6">${SIM_REGISTRO}</text>
+    <text x="50" y="69.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="17" fill="#000">S.I.M.</text>
   </svg>`;
 }
 const API = "https://wughmiprdbycsmkjsslj.supabase.co/functions/v1/etiquetas/api";
@@ -85,27 +85,25 @@ function htmlEtiqueta(produto, lote) {
     <tr class="${l.sub ? "sub" : ""}"><td class="rot">${esc(l.rotulo)} (${l.unidade})</td><td>${fmt1(l.por100)}</td><td>${fmt1(l.porcao)}</td><td>${fmtInt(l.vd)}</td></tr>`).join("");
   return `
   <div class="etq">
-    <div class="esq">
-      <div class="topo">
-        <img class="logo" src="logo.png" alt="">
-        <div class="titulos"><div class="t1">${esc(produto.nome)}</div><div class="t2">${esc(produto.descricao || "")}</div></div>
-      </div>
-      <div class="info">
-        <div class="info-t">INFORMAÇÃO NUTRICIONAL</div>
-        <div>Porções por embalagem: ${fmtInt(produto.porcoes_por_embalagem)}</div>
-        <div>Porção: ${fmt1(c.porcao_g)} g (${esc(produto.medida_caseira || "")})</div>
-      </div>
+    <img class="logo" src="logo.png" alt="">
+    <div class="titulos"><div class="t1">${esc(produto.nome)}</div><div class="t2">${esc(produto.descricao || "")}</div></div>
+    <div class="info">
+      <div class="info-t">INFORMAÇÃO NUTRICIONAL</div>
+      <div>Porções por embalagem: ${fmtInt(produto.porcoes_por_embalagem)}</div>
+      <div>Porção: ${fmt1(c.porcao_g)} g (${esc(produto.medida_caseira || "")})</div>
+    </div>
+    <div class="tabela">
       <table class="tab">
         <thead><tr><th></th><th>100 g</th><th>${fmt1(c.porcao_g)} g</th><th>%VD*</th></tr></thead>
         <tbody>${linhas}</tbody>
       </table>
       <div class="rodape">*Percentual de valores diários fornecidos pela porção.</div>
+      <div class="cons"><span class="cons-t">Conservação e Temperatura:</span> ${esc(produto.conservacao || "")}<br>Aviso: ${esc(produto.aviso || "")}</div>
     </div>
     <div class="dir">
       <div class="caixa"><div class="cx-t">DATA DE FABRICAÇÃO</div><div class="cx-v">${lote ? fmtData(lote.data_fabricacao) : "__/__/____"}</div></div>
       <div class="caixa"><div class="cx-t">VALIDADE</div><div class="cx-v">${lote ? fmtData(lote.data_validade) : "__/__/____"}</div></div>
       <div class="caixa"><div class="cx-t">LOTE</div><div class="cx-v">${lote ? lote7(lote.numero) : "0000000"}</div></div>
-      <div class="cons"><div class="cons-t">Conservação e Temperatura</div><div class="cons-v">${esc(produto.conservacao || "")}</div><div class="cons-v">Aviso: ${esc(produto.aviso || "")}</div></div>
       <div class="selo">${produto.selo ? `<img src="${produto.selo}" alt="">` : seloSIM()}</div>
     </div>
     <div class="empresa"><b>Produzido por ${esc(EMPRESA.razao)}</b> · CNPJ ${esc(EMPRESA.cnpj)}<br>${esc(EMPRESA.endereco)} · Tel. ${esc(EMPRESA.telefone)} · ${esc(EMPRESA.email)}</div>
