@@ -75,7 +75,7 @@ table.ficha input.falta { border-color: var(--erro); background: #fff5f5; }
 /* ---------------------------------------------------- etiqueta 10 × 6 cm --- */
 .etq { width: 100mm; height: 60mm; padding: 1.8mm 2.5mm 1.2mm; display: grid; grid-template-columns: 1fr 30mm; grid-template-rows: 1fr auto; column-gap: 2mm; font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff; overflow: hidden; break-after: page; page-break-after: always; }
 .etq .esq { display: flex; flex-direction: column; min-width: 0; }
-.etq .topo { display: flex; gap: 1.5mm; align-items: flex-start; height: 8.5mm; }
+.etq .topo { display: flex; gap: 1.5mm; align-items: flex-start; height: 8.5mm; width: calc(100% + 32mm); }
 .etq .logo { width: 8.5mm; height: 8.5mm; object-fit: contain; }
 .etq .titulos { flex: 1; min-width: 0; text-align: center; padding-top: .5mm; }
 .etq .t1 { font-weight: bold; font-size: 9pt; line-height: 1.15; white-space: nowrap; overflow: hidden; }

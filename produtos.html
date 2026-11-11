@@ -126,6 +126,7 @@ function recalcular() {
   }
   const seloAtual = selo !== undefined ? selo : ($("f-selo-img").style.display !== "none" ? $("f-selo-img").src : null);
   $("previa").innerHTML = htmlEtiqueta({ ...p, selo: seloAtual || null }, null);
+  ajustarTitulos($("previa"));
 }
 document.querySelectorAll("#form input").forEach((i) => i.addEventListener("input", recalcular));
 

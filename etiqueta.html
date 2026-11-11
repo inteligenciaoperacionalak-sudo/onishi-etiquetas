@@ -32,6 +32,7 @@ const podeImprimir = s.usuario.perfil === "admin" || s.usuario.perfil === "produ
 function render() {
   const n = lote ? Math.max(1, Math.min(500, Number($("b-qtd").value) || 1)) : 1;
   $("folha").innerHTML = Array.from({ length: n }, () => htmlEtiqueta(produto, lote)).join("");
+  ajustarTitulos($("folha"));
   document.title = (lote ? "Lote " + lote7(lote.numero) + " · " : "Prévia · ") + produto.nome;
 }
 async function carregar() {

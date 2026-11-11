@@ -7,7 +7,6 @@ function seloSIM() {
   return `<svg class="sim" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="Inspecionado S.I.M. ${SIM_REGISTRO}">
     <defs><path id="arcTop" d="M 18,50 A 32,32 0 0 1 82,50"/><path id="arcBot" d="M 12,50 A 38,38 0 0 0 88,50"/></defs>
     <circle cx="50" cy="50" r="48" fill="#fff" stroke="#000" stroke-width="3.5"/>
-    <circle cx="50" cy="50" r="43" fill="none" stroke="#000" stroke-width="1"/>
     <text font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="11" fill="#000" letter-spacing=".8"><textPath href="#arcTop" startOffset="50%" text-anchor="middle">INSPECIONADO</textPath></text>
     <text font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="9.5" fill="#000" letter-spacing=".5"><textPath href="#arcBot" startOffset="50%" text-anchor="middle">PORTO SEGURO - BA</textPath></text>
     <text x="50" y="47" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="11" fill="#000">${SIM_REGISTRO}</text>
@@ -60,7 +59,7 @@ function calcular(p) {
   const linhas = NUTRIENTES.map((n) => {
     const raw = p[n.chave];
     const v100 = raw === null || raw === undefined || raw === "" ? null : Number(String(raw).replace(",", "."));
-    const vPorcao = v100 === null || !isFinite(v100) ? null : Math.round(v100 * porcao / 100 * 10) / 10;
+    const vPorcao = v100 === null || !isFinite(v100) ? null : Math.round(v100 * porcao / 100 * 100) / 100;
     const vd = VD[n.chave];
     const pct = vPorcao === null || vd === null ? null : Math.round(vPorcao / vd * 100);
     return { ...n, por100: v100, porcao: vPorcao, vd: pct };
@@ -68,7 +67,8 @@ function calcular(p) {
   const completa = linhas.every((l) => l.por100 !== null && isFinite(l.por100)) && porcao > 0 && Number(p.porcoes_por_embalagem) > 0 && !!String(p.medida_caseira || "").trim();
   return { porcao_g: porcao, linhas, completa };
 }
-const fmt1 = (v) => v === null || v === undefined || !isFinite(v) ? "—" : Number(v).toFixed(1).replace(".", ",");
+// 1 casa decimal; 2 quando o valor tem centésimos (ex.: 0,08 g)
+const fmt1 = (v) => { if (v === null || v === undefined || v === "" || !isFinite(v)) return "—"; const n = Math.round(Number(v) * 100) / 100; return (Math.abs(n * 10 - Math.round(n * 10)) > 1e-6 ? n.toFixed(2) : n.toFixed(1)).replace(".", ","); };
 const fmtInt = (v) => v === null || v === undefined || !isFinite(v) ? "—" : String(Math.round(v));
 const fmtData = (iso) => !iso ? "—" : iso.slice(8, 10) + "/" + iso.slice(5, 7) + "/" + iso.slice(0, 4);
 const fmtDataHora = (iso) => !iso ? "—" : new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Bahia", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -128,5 +128,13 @@ function cabecalho(titulo, ativo) {
     <nav>${nav}</nav>
     <div class="quem">${u ? esc(u.nome) + " · " + esc(u.perfil_nome) : ""} <button class="lnk" onclick="sair()">sair</button></div>
   </div></header><h1 class="pag-t">${esc(titulo)}</h1>`;
+}
+// Diminui a fonte do nome e da descrição até caberem na largura (nomes longos, ex.: GUAIUBA 0,800G A 1KG)
+function ajustarTitulos(raiz) {
+  (raiz || document).querySelectorAll(".etq .t1, .etq .t2").forEach((el) => {
+    let pt = el.classList.contains("t1") ? 9 : 7.5;
+    el.style.fontSize = pt + "pt";
+    while (el.scrollWidth > el.clientWidth + 1 && pt > 5) { pt -= 0.25; el.style.fontSize = pt + "pt"; }
+  });
 }
 function aviso(el, msg, tipo) { el.textContent = msg || ""; el.className = "aviso " + (msg ? (tipo || "ok") : ""); }
